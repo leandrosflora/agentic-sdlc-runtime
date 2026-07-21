@@ -24,7 +24,7 @@ class GovernedCommandRunner:
 
     def __init__(self, workspace: str | Path, allowed: Iterable[str] = ("python", "pytest", "ruff")):
         self.workspace = Path(workspace).resolve()
-        self.allowed = frozenset(allowed)
+        self.allowed = frozenset(Path(item).name for item in allowed)
 
     def run(self, argv: list[str], *, timeout: int = 300,
             extra_env: dict[str, str] | None = None) -> CommandEvidence:
