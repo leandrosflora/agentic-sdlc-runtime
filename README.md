@@ -111,9 +111,43 @@ python examples/end_to_end_demo.py --unhealthy
 
 O primeiro comando termina em completed. O segundo viola o guardrail de observação e restaura o digest estável anterior.
 
+
+## P6 — integração real controlada
+
+O P6 conecta uma Issue real ao workflow e mantém os adapters fake para testes:
+
+~~~text
+Issue → agentes → pytest + secret scan → Check + comentário
+→ dispatch humano protegido pelo Environment demo
+→ deploy do digest aprovado → health check HTTP
+→ completed ou rollback → Check + comentário + evidências
+~~~
+
+### Configuração do repositório
+
+1. Crie o Environment `demo` e habilite **Required reviewers**. O autor da Issue não pode ser o aprovador.
+2. Configure as variables:
+   - `MODEL_BASE_URL` e `MODEL_NAME` para o Model Gateway real;
+   - `P6_DEPLOY_COMMAND`: array JSON, por exemplo `["python","ops/deploy.py"]`;
+   - `P6_ROLLBACK_COMMAND`: array JSON, por exemplo `["python","ops/rollback.py"]`;
+   - `P6_HEALTH_URL`: endpoint HTTP/HTTPS do ambiente demo.
+3. Configure o secret `MODEL_API_KEY`. Sem ele, a preparação usa o modelo fake determinístico.
+4. Abra uma Issue ou aplique o label `agentic-sdlc`. O workflow **P6 prepare** publica o digest e preserva o checkpoint como artifact.
+5. Execute manualmente **P6 release demo** informando Issue, run ID da preparação e o digest exato. O Environment pausa o job para aprovação.
+
+Os comandos são arrays JSON, nunca strings de shell. Somente executáveis permitidos são aceitos e credenciais não são copiadas para contexto, logs ou evidence bundles.
+
+A implementação usa:
+
+- `GitHubClient` para Issues, comentários e Checks;
+- `GovernedCommandRunner` para gates e operações;
+- `ExternalDemoEnvironment` para deploy e rollback;
+- `HttpHealthObserver` para a decisão pós-release;
+- `P6Integration` para correlação, digest e feedback.
+
 ## Limites desta versão
 
-- o gateway MCP incluído é fake e voltado a testes;
+- o gateway MCP incluído é fake e voltado a testes; integrações GitHub, comandos e health check já possuem adapters reais;
 - o gateway real de modelo usa o contrato chat completions OpenAI-compatible;
 - persistência local demonstra os contratos; produção deve usar storage durável/WORM;
 - policy OPA permanece no repositório de referência e será integrada como PDP remoto ou sidecar.
