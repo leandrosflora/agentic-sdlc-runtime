@@ -1,0 +1,39 @@
+name: P6 prepare
+
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: read
+  checks: write
+  issues: write
+
+jobs:
+  prepare:
+    if: github.event.action == 'opened' || github.event.label.name == 'agentic-sdlc'
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.p6.outputs.digest }}
+      change_id: ${{ steps.p6.outputs.change_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - id: p6
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
+          MODEL_BASE_URL: ${{ vars.MODEL_BASE_URL }}
+          MODEL_NAME: ${{ vars.MODEL_NAME }}
+        run: |
+          python scripts/p6_action.py prepare             --issue "${{ github.event.issue.number }}"             --head-sha "${{ github.sha }}"             --project "${{ github.repository }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p6-state-${{ github.event.issue.number }}
+          path: .runtime
+          include-hidden-files: true
+          retention-days: 30
