@@ -23,3 +23,5 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: pytest --cov=agentic_sdlc_runtime --cov-report=term-missing --cov-fail-under=70
       - run: python examples/run_demo.py
+      - run: python examples/end_to_end_demo.py
+      - run: python examples/end_to_end_demo.py --unhealthy
