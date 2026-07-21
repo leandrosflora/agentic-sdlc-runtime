@@ -145,6 +145,52 @@ A implementação usa:
 - `HttpHealthObserver` para a decisão pós-release;
 - `P6Integration` para correlação, digest e feedback.
 
+
+## Developer Agent conectado ao GitHub
+
+O `DeveloperAgentService` transforma uma Issue em um draft PR no repositório alvo:
+
+1. solicita ao Model Gateway uma alteração JSON estruturada;
+2. restringe arquivos a `src/`, `tests/` e `docs/`;
+3. bloqueia traversal, workflows, policy e arquivos sensíveis;
+4. cria `agent/issue-<número>-<resumo>`;
+5. grava arquivos pela API do GitHub;
+6. abre draft PR e comenta na Issue;
+7. nunca faz merge.
+
+~~~bash
+python scripts/developer_action.py \
+  --repository leandrosflora/agentic-sdlc-demo-app \
+  --issue 2
+~~~
+
+## P7 — produção e governança
+
+O runtime inclui adapters testáveis e substituíveis para:
+
+| Capacidade | Implementação |
+|---|---|
+| OPA/PDP | `OPAPolicyDecisionPoint`, HTTP e fail-closed |
+| Workload identity | `GitHubOIDCIdentityProvider`, token OIDC de curta duração |
+| Evidência durável | `S3EvidenceStore`, conteúdo endereçado por SHA-256 |
+| Assinatura/SBOM | `SupplyChainAttestor`, Syft + Cosign |
+| OpenTelemetry | `OTLPHTTPExporter` |
+| Budgets | `BudgetLedger`, bloqueio antes do excesso |
+| Filas/workers | fila SQLite local e adapter SQS |
+| Sandbox | Docker sem rede, read-only, cap-drop e limites |
+| Change Set | ordenação topológica multi-repositório |
+| SLO/recuperação | decisão objetiva de continuar ou rollback |
+
+O manifesto Kubernetes em `deploy/kubernetes/worker.yaml` demonstra workers replicáveis, ServiceAccount para workload identity, filesystem read-only, non-root, seccomp e NetworkPolicy deny-by-default.
+
+Dependências de providers são opcionais:
+
+~~~bash
+pip install -e ".[production]"
+~~~
+
+Antes de produção, configure Object Lock/versionamento no bucket de evidências, KMS/keyless signing, allowlist de egress, backend remoto de budget e DLQ da fila.
+
 ## Limites desta versão
 
 - o gateway MCP incluído é fake e voltado a testes; integrações GitHub, comandos e health check já possuem adapters reais;

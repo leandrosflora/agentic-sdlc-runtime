@@ -9,6 +9,7 @@ agentic-sdlc = "agentic_sdlc_runtime.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-cov>=5"]
+production = ["boto3>=1.35"]
 
 [build-system]
 requires = ["setuptools>=68"]
