@@ -1,0 +1,58 @@
+name: P6 release demo
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Issue number prepared by P6
+        required: true
+        type: number
+      prepare_run_id:
+        description: Run ID of the successful P6 prepare workflow
+        required: true
+        type: string
+      digest:
+        description: Exact digest shown in the Issue comment
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  checks: write
+  issues: write
+  actions: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: demo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - uses: actions/download-artifact@v4
+        with:
+          name: p6-state-${{ inputs.issue }}
+          path: .runtime
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.prepare_run_id }}
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+          P6_DEPLOY_COMMAND: ${{ vars.P6_DEPLOY_COMMAND }}
+          P6_ROLLBACK_COMMAND: ${{ vars.P6_ROLLBACK_COMMAND }}
+          P6_HEALTH_URL: ${{ vars.P6_HEALTH_URL }}
+          MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
+          MODEL_BASE_URL: ${{ vars.MODEL_BASE_URL }}
+          MODEL_NAME: ${{ vars.MODEL_NAME }}
+        run: |
+          python scripts/p6_action.py release             --issue "${{ inputs.issue }}"             --digest "${{ inputs.digest }}"             --approver "${{ github.actor }}"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p6-release-evidence-${{ inputs.issue }}-${{ github.run_id }}
+          path: .runtime
+          include-hidden-files: true
+          retention-days: 90

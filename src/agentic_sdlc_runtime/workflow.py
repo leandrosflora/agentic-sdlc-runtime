@@ -106,7 +106,7 @@ class EndToEndWorkflow:
         return state
 
     def approve_and_release(self, change_id: str, approval: HumanApproval,
-                            *, healthy: bool = True) -> dict:
+                            *, healthy: bool | None = True) -> dict:
         state = self.checkpoints.load(change_id, "end-to-end")
         if not state:
             raise ValueError("workflow not found")
@@ -132,7 +132,8 @@ class EndToEndWorkflow:
         self._save(state)
 
         state["observation"] = self.environment.observe(healthy)
-        if healthy:
+        observed_healthy = bool(state["observation"]["healthy"])
+        if observed_healthy:
             state["status"] = "completed"
         else:
             state["deployment"] = self.environment.rollback()
