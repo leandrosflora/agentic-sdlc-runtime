@@ -1,0 +1,2 @@
+[console_scripts]
+agentic-sdlc = agentic_sdlc_runtime.cli:main
