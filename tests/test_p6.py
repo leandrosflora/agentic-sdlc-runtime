@@ -6,6 +6,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import pytest
 
 from agentic_sdlc_runtime.demo_environment import DemoEnvironment
+from agentic_sdlc_runtime.evidence import path_from_uri
 from agentic_sdlc_runtime.external_environment import HttpHealthObserver
 from agentic_sdlc_runtime.github import GitHubClient
 from agentic_sdlc_runtime.p6 import P6Integration
@@ -104,7 +105,7 @@ def test_p6_issue_to_release_with_evidence_and_feedback(tmp_path):
     assert prepared["status"] == "awaiting_human_approval"
     assert prepared["quality_evidence"]
     assert json.loads(
-        open(prepared["quality_evidence"][0].removeprefix("file://"), encoding="utf-8").read()
+        path_from_uri(prepared["quality_evidence"][0]).read_text(encoding="utf-8")
     )["head_sha"] == "abc123"
 
     released = integration.release(

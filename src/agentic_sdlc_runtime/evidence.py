@@ -4,6 +4,12 @@ import hashlib
 import json
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
+from urllib.request import url2pathname
+
+
+def path_from_uri(uri: str) -> Path:
+    return Path(url2pathname(urlparse(uri).path))
 
 
 class EvidenceStore:
@@ -20,4 +26,4 @@ class EvidenceStore:
         return path.as_uri()
 
     def read(self, uri: str) -> dict[str, Any]:
-        return json.loads(Path(uri.removeprefix("file://")).read_text(encoding="utf-8"))
+        return json.loads(path_from_uri(uri).read_text(encoding="utf-8"))
