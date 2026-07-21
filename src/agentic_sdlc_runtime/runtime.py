@@ -6,12 +6,13 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from .authorization import Authorizer
 from .checkpoint import CheckpointStore
 from .context import ContextBuilder
 from .definitions import AgentRegistry
 from .events import EventStore
 from .evidence import EvidenceStore
-from .mcp import FakeMCPGateway
+from .mcp import FakeMCPGateway, ToolDeniedError
 from .model_gateway import ModelGateway
 from .models import ModelResponse, RunRequest, RunResult
 
@@ -19,12 +20,14 @@ from .models import ModelResponse, RunRequest, RunResult
 class AgentRuntime:
     def __init__(self, *, definitions_dir: str | Path, state_dir: str | Path,
                  model_gateway: ModelGateway, mcp_gateway: FakeMCPGateway,
-                 allowed_classification: str = "internal"):
+                 allowed_classification: str = "internal",
+                 authorizer: Authorizer | None = None):
         state_dir = Path(state_dir)
         self.registry = AgentRegistry(definitions_dir)
         self.context_builder = ContextBuilder(allowed_classification)
         self.model_gateway = model_gateway
         self.mcp_gateway = mcp_gateway
+        self.authorizer = authorizer
         self.evidence = EvidenceStore(state_dir / "evidence")
         self.checkpoints = CheckpointStore(state_dir / "checkpoints")
         self.events = EventStore(state_dir / "events")
@@ -75,6 +78,20 @@ class AgentRuntime:
                     arguments = tool_call.get("arguments", {})
                     if isinstance(arguments, str):
                         arguments = json.loads(arguments)
+                    if self.authorizer is not None:
+                        decision = self.authorizer.check({
+                            "action": name,
+                            "identity": {"agent_role": definition.role,
+                                         "project_id": request.project_id},
+                            "resource": {"project_id": request.project_id,
+                                         **request.input_data.get("resource", {})},
+                            "change": request.input_data.get("change", {}),
+                            "approval": request.input_data.get("approval", {}),
+                        })
+                        if not decision.allowed:
+                            raise ToolDeniedError(
+                                f"policy denied {name} for {definition.role}"
+                            )
                     result = self.mcp_gateway.call(
                         name, arguments, definition.allowed_tools,
                         request.project_id, request.change_id,

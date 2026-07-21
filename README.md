@@ -11,9 +11,11 @@ Os papéis Product, Architecture, Developer, Test, Security, Reviewer, Release e
 - Fake Model Gateway determinístico;
 - gateway HTTP real compatível com OpenAI, proxies corporativos e vLLM;
 - MCP fake com grants por agente;
+- gateway MCP real via stdio (JSON-RPC 2.0) para servidores MCP subprocess;
 - runtime com tool loop limitado;
+- autorização OPA no tool loop: PDP remoto (SDLC_OPA_URL) ou `opa` CLI (SDLC_POLICY_PATH) contra a policy canônica do repositório de referência;
 - eventos compatíveis com agent-event.schema.json;
-- evidence bundles persistidos com SHA-256;
+- evidence bundles write-once com SHA-256, arquivos read-only e manifest append-only com hash chain (verify() detecta adulteração);
 - checkpoints atômicos;
 - retomada sem repetir chamada ao modelo;
 - CLI e golden path;
@@ -191,9 +193,27 @@ pip install -e ".[production]"
 
 Antes de produção, configure Object Lock/versionamento no bucket de evidências, KMS/keyless signing, allowlist de egress, backend remoto de budget e DLQ da fila.
 
+## Autorização OPA no tool loop
+
+A policy canônica continua em agentic-sdlc-reference-architecture. O runtime a
+consulta antes de cada tool call quando um authorizer é configurado:
+
+~~~bash
+# PDP remoto (sidecar ou servidor OPA central)
+export SDLC_OPA_URL="http://localhost:8181"
+
+# ou avaliação local com o binário opa
+export SDLC_POLICY_PATH="../agentic-sdlc-reference-architecture/policies/agent_authorization.rego"
+
+agentic-sdlc --agent product --project payments --change CHG-1001 --objective "..."
+~~~
+
+Sem authorizer configurado, apenas os grants por agente são aplicados
+(comportamento anterior). Decisão indefinida ou PDP indisponível nunca vira
+allow silencioso.
+
 ## Limites desta versão
 
-- o gateway MCP incluído é fake e voltado a testes; integrações GitHub, comandos e health check já possuem adapters reais;
 - o gateway real de modelo usa o contrato chat completions OpenAI-compatible;
-- persistência local demonstra os contratos; produção deve usar storage durável/WORM;
-- policy OPA permanece no repositório de referência e será integrada como PDP remoto ou sidecar.
+- o gateway MCP real cobre o transporte stdio; HTTP/SSE ficam para uma versão futura;
+- o evidence store local é tamper-evident (write-once + hash chain), não tamper-proof; produção deve montar esse layout sobre storage WORM/object-lock.

@@ -6,6 +6,7 @@ import os
 from dataclasses import asdict
 from pathlib import Path
 
+from .authorization import OpaHttpAuthorizer, authorizer_from_environment
 from .mcp import FakeMCPGateway
 from .model_gateway import FakeModelGateway, OpenAICompatibleGateway
 from .models import ContextSource, RunRequest
@@ -22,6 +23,8 @@ def main() -> None:
     parser.add_argument("--state", default=".runtime")
     parser.add_argument("--real-model", action="store_true")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--opa-url", help="OPA server used as PDP for tool calls "
+                        "(also SDLC_OPA_URL; SDLC_POLICY_PATH selects the opa CLI instead)")
     args = parser.parse_args()
 
     model = OpenAICompatibleGateway() if args.real_model else FakeModelGateway()
@@ -32,6 +35,7 @@ def main() -> None:
         definitions_dir=Path(args.definitions), state_dir=Path(args.state),
         model_gateway=model, mcp_gateway=mcp,
         allowed_classification=os.environ.get("MAX_CONTEXT_CLASSIFICATION", "internal"),
+        authorizer=OpaHttpAuthorizer(args.opa_url) if args.opa_url else authorizer_from_environment(),
     )
     request = RunRequest(
         agent_role=args.agent, project_id=args.project, change_id=args.change,
