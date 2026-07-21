@@ -41,12 +41,16 @@ class AgentRuntime:
         }
 
         try:
-            if previous and previous.get("stage") in {"model_completed", "tools_completed"}:
+            previous_stage = (previous or {}).get("stage")
+            if previous_stage == "failed":
+                previous_stage = (previous or {}).get("resume_stage")
+            if previous and previous_stage in {"model_completed", "tools_completed"}:
                 context_data = previous["context"]
                 model_data = previous["model_response"]
                 response = ModelResponse(**model_data)
                 state["context"] = context_data
                 state["model_response"] = model_data
+                state["stage"] = previous_stage
             else:
                 context = self.context_builder.build(
                     request.project_id, request.change_id, request.objective,
@@ -104,6 +108,7 @@ class AgentRuntime:
                              evidence_refs=evidence_refs, event_refs=[event_ref],
                              resumed_from=resumed_from)
         except Exception as error:
+            state["resume_stage"] = state.get("stage")
             state.update({"stage": "failed", "error": type(error).__name__, "message": str(error)})
             self.checkpoints.save(request.change_id, request.agent_role, state)
             raise
