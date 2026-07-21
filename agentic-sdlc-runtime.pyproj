@@ -4,9 +4,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>89a23d15-c087-4f47-b3d7-f90b91bbb9a6</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>agentic_sdlc_runtime.py</StartupFile>
-    <SearchPath>
-    </SearchPath>
+    <StartupFile>examples\run_demo.py</StartupFile>
+    <SearchPath>src</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>agentic-sdlc-runtime</Name>
@@ -21,7 +20,11 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="agentic_sdlc_runtime.py" />
+    <Compile Include="examples\run_demo.py" />
+    <Compile Include="examples\end_to_end_demo.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="examples\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
