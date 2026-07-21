@@ -8,6 +8,7 @@ from pathlib import Path
 from agentic_sdlc_runtime.demo_environment import DemoEnvironment
 from agentic_sdlc_runtime.external_environment import ExternalDemoEnvironment, HttpHealthObserver
 from agentic_sdlc_runtime.github import GitHubClient
+from agentic_sdlc_runtime.model_gateway import OpenAICompatibleGateway
 from agentic_sdlc_runtime.p6 import P6Integration
 from agentic_sdlc_runtime.quality import GovernedCommandRunner, QualityGates
 from agentic_sdlc_runtime.workflow import EndToEndWorkflow
@@ -59,8 +60,12 @@ def main() -> None:
             observer=HttpHealthObserver(os.environ["P6_HEALTH_URL"]),
         )
 
+    model_factory = None
+    if os.environ.get("MODEL_API_KEY") and os.environ.get("MODEL_NAME"):
+        model_factory = lambda _role, _state: OpenAICompatibleGateway()
     workflow = EndToEndWorkflow(
         definitions_dir="agents", state_dir=args.state_dir, environment=environment,
+        model_factory=model_factory,
     )
     integration = P6Integration(
         github=github, workflow=workflow, quality=QualityGates(runner),
