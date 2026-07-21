@@ -91,6 +91,26 @@ Cada execução persiste:
 
 Uma falha após a resposta do modelo preserva o checkpoint. A execução com --resume reutiliza a resposta persistida e continua no tool call, evitando custo e efeito duplicados.
 
+## Workflow ponta a ponta
+
+O runtime implementa uma jornada durável completa:
+
+~~~text
+Product → Architecture → Developer → Test → Security → Reviewer
+→ awaiting_human_approval
+→ Release → demo deployment → observation
+→ completed ou rolled_back
+~~~
+
+A aprovação humana é obrigatória, independente do autor e vinculada ao digest exato. O ambiente demo mantém digest atual, anterior e histórico de deploy, observação e rollback.
+
+~~~bash
+python examples/end_to_end_demo.py
+python examples/end_to_end_demo.py --unhealthy
+~~~
+
+O primeiro comando termina em completed. O segundo viola o guardrail de observação e restaura o digest estável anterior.
+
 ## Limites desta versão
 
 - o gateway MCP incluído é fake e voltado a testes;
